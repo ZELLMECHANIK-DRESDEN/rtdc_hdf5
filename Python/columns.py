@@ -35,7 +35,7 @@ columns = [
    ["fl3_npeaks", "FL-3 number of peaks"],
    ["fl3_pos", "FL-3 position of peak [µs]"],
    ["fl3_width", "FL-3 width [µs]"],
-   ["frame", "Frame number"],
+   ["frame", "Video frame number"],
    # What is Inertia ratio exactly m20/m02?
    ["inert_ratio", "Inertia ratio sqrt(m20/m02)"],
    ["inert_ratio_raw", "Raw inertia ratio sqrt(m20/m02)"],
