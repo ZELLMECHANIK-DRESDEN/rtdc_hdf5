@@ -12,11 +12,15 @@ columns = [
    # What is the difference between fc0_max and fc1_max?
    ["fc0_max", "Fluorescence intensity maximum [a.u.]"],
    ["fc0_width", "Fluorescence peak width [µs]"],
+   # Is this the area of the first or the highest peak?
    ["fl1_area", "FL-1 area of peak [a.u.]"],
+   # Set to nan if there is only one peak?
    ["fl1_dist", "FL-1 distance between two first peaks [µs]"],
    ["fl1_max", "FL-1 maximum [a.u.]"],
    ["fl1_npeaks", "FL-1 number of peaks"],
+   # Is this the position of the first or the highest peak?
    ["fl1_pos", "FL-1 position of peak [µs]"],
+   # Is this the wifth of the first or the highest peak?
    ["fl1_width", "FL-1 width [µs]"],
    ["fl2_area", "FL-2 area of peak [a.u.]"],
    ["fl2_dist", "FL-2 distance between two first peaks [µs]"],
