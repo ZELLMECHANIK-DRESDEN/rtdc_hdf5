@@ -2,6 +2,7 @@ columns = [
    ["area_cvx", "Convex area [px]"],
    ["area_msd", "Measured area [px]"],
    ["area_ratio", "Convex to measured area ratio"],
+   # This is the convex area per definition
    ["area_um", "Area [µm²]"],
    ["aspect", "Aspect ratio of bounding box"],
    ["bright_avg", "Brightness average within contour [a.u.]"],
