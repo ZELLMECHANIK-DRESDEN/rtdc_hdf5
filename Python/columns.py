@@ -10,9 +10,6 @@ columns = [
    ["circ", "Circularity"],
    ["deform", "Deformation"],
    ["emodulus", "Young's Modulus [kPa]"],
-   # What is the difference between fc0_max and fc1_max?
-   ["fc0_max", "Fluorescence intensity maximum [a.u.]"],
-   ["fc0_width", "Fluorescence peak width [µs]"],
    # Is this the area of the first or the highest peak?
    ["fl1_area", "FL-1 area of peak [a.u.]"],
    # Set to nan if there is only one peak?
