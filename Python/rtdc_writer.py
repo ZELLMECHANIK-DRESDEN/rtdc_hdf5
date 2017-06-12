@@ -110,10 +110,13 @@ def test_bulk_write():
 
 def test_real_time_write():
     # Create huge array
-    N = 2000
+    N = 11440
     # Writing 10 images at a time is faster than writing one image at a time
     M = 10
-    images = np.zeros((M, 256, 256), dtype=np.uint8)
+    assert N//M == np.round(N/M)
+    shx = 250
+    shy = 80
+    images = np.zeros((M, shx, shy), dtype=np.uint8)
     axis1 = np.linspace(0,1,M)
     axis2 = np.arange(M)
     rtdc_file = "test_rt.rtdc"
@@ -124,7 +127,7 @@ def test_real_time_write():
     
     with h5py.File(rtdc_file, "a") as fobj:
         # simulate real time and write one image at a time
-        for _ii in range(N):
+        for _ii in range(N//M):
             #print(ii)
             write_realtime(fobj,
                            name=["image", "axis1", "axis2"],
@@ -136,8 +139,8 @@ def test_real_time_write():
     # Read the file:
     rtdc_data = h5py.File(rtdc_file)
     events = rtdc_data["events"]
-    assert events["image"].shape == (M*N, 256, 256)
-    assert events["axis1"].shape == (M*N,)
+    assert events["image"].shape == (N, shx, shy)
+    assert events["axis1"].shape == (N,)
     assert np.dtype(events["axis1"]) == np.float
     assert np.dtype(events["axis2"]) == np.int
 
