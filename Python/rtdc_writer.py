@@ -7,6 +7,8 @@ import time
 import h5py
 import numpy as np
 
+import cv2
+
 
 def write_bulk(rtdc_file, name, data, chunks=None):
     """Write data to RT-DC file
@@ -85,6 +87,16 @@ def write_realtime(rtdc_file, name, data):
                                   data = dat,
                                   maxshape=maxshape,
                                   chunks=chunks)
+            if nam=="image":
+                dset = events[nam]
+                # add attributes for images to be detected properly
+                # from https://github.com/h5py/h5py/issues/771
+                # Create and Set image attributes
+                # hdfView recognizes this a series of images
+                dset.attrs.create('CLASS', 'IMAGE')
+                dset.attrs.create('IMAGE_VERSION', '1.2')
+                dset.attrs.create('IMAGE_SUBCLASS', 'IMAGE_GRAYSCALE')
+                #dset.attrs.create('IMAGE_MINMAXRANGE', np.array([0,255], dtype=np.uint8))
         else:
             # Add new data
             dset = events[nam]
@@ -114,9 +126,9 @@ def test_real_time_write():
     # Writing 10 images at a time is faster than writing one image at a time
     M = 10
     assert N//M == np.round(N/M)
-    shx = 250
-    shy = 80
-    images = np.zeros((M, shx, shy), dtype=np.uint8)
+    shx = 256
+    shy = 96
+    images = np.zeros((M, shy, shx), dtype=np.uint8)
     axis1 = np.linspace(0,1,M)
     axis2 = np.arange(M)
     rtdc_file = "test_rt.rtdc"
@@ -129,9 +141,18 @@ def test_real_time_write():
         # simulate real time and write one image at a time
         for _ii in range(N//M):
             #print(ii)
+            num_img = np.copy(images)
+            for _iii in range(len(images)):
+                # put pos in chunk and nr of chunk into images
+                cv2.putText(num_img[_iii], str(_iii)+" chunk:"+str(_ii)
+                            ,(20,50), cv2.FONT_HERSHEY_PLAIN, 1.0, 255)
+                cv2.putText(num_img[_iii], str(_iii+M*_ii)
+                            ,(20,70), cv2.FONT_HERSHEY_PLAIN, 1.0, 50)
+            
+
             write_realtime(fobj,
                            name=["image", "axis1", "axis2"],
-                           data=[images[:], axis1[:], axis2[:]]
+                           data=[num_img[:], axis1[:], axis2[:]]
                            )
 
     print("Time to write {} events: {:.2f}s".format(N*M, time.time()-a))
@@ -139,7 +160,7 @@ def test_real_time_write():
     # Read the file:
     rtdc_data = h5py.File(rtdc_file)
     events = rtdc_data["events"]
-    assert events["image"].shape == (N, shx, shy)
+    assert events["image"].shape == (N, shy, shx)
     assert events["axis1"].shape == (N,)
     assert np.dtype(events["axis1"]) == np.float
     assert np.dtype(events["axis2"]) == np.int
