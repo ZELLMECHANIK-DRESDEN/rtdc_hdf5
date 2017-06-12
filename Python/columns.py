@@ -18,7 +18,7 @@ columns = [
    ["fl1_npeaks", "FL-1 number of peaks"],
    # Is this the position of the first or the highest peak?
    ["fl1_pos", "FL-1 position of peak [µs]"],
-   # Is this the wifth of the first or the highest peak?
+   # Is this the width of the first or the highest peak?
    ["fl1_width", "FL-1 width [µs]"],
    ["fl2_area", "FL-2 area of peak [a.u.]"],
    ["fl2_dist", "FL-2 distance between two first peaks [µs]"],
