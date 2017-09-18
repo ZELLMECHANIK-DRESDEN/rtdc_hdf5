@@ -24,6 +24,8 @@ setup = [
     ["flow rate sample", "Sample flow rate [µl/s]"],
     # General - Sheath Flow Rate [ul/s]
     ["flow rate sheath", "Sheath low rate [µl/s]"],
+    # no correspondence
+    ["medium", "The medium used (e.g. CellCarrier, CellCarrierB, water)"],
     # Image - Setup
     ["module composition", "Comma-separated list of modules used"],
     # no correspondence
@@ -117,7 +119,7 @@ experiment = [
     # no correspondence
     ["date", "Date of measurement (YYYY-MM-DD)"],
     # General - Measurement Number
-    ["run count", "Index of measurement run"], 
+    ["run count", "Index of measurement run"],
     # no correspondence
     ["sample", "Measured sample or user-defined reference"],
     # no correspondence
