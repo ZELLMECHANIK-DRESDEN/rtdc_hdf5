@@ -23,7 +23,7 @@ setup = [
     # General - Sample Flow Rate [ul/s]
     ["flow rate sample", "Sample flow rate [µl/s]"],
     # General - Sheath Flow Rate [ul/s]
-    ["flow rate sheath", "Sheath low rate [µl/s]"],
+    ["flow rate sheath", "Sheath flow rate [µl/s]"],
     # no correspondence
     ["medium", "The medium used (e.g. CellCarrier, CellCarrierB, water)"],
     # Image - Setup
