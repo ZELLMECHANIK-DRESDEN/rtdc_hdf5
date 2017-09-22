@@ -1,63 +1,70 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 """RT DC file format writer"""
+from __future__ import unicode_literals
+
 import os
 import time
 
 import h5py
 import numpy as np
 
-import cv2
+import columns
+import meta
 
 
-def write_bulk(rtdc_file, name, data, chunks=None):
+def write(rtdc_file, name, data, meta={}, close=True):
     """Write data to RT-DC file
     
     Parameters
     ----------
-    rtdc_file: str or file object
-        Path to file or file descriptor
-    name: str or list of str
-        Name of the column to save
-    data: ndarray or list of ndarray
-        The data to store
+    rtdc_file: path or h5py.File
+        The file to write to. If it is a path, an instance of
+        `h5py.File` will be created. If it is an instance of
+        `h5py.File`, the data will be appended.
+    data: dict
+        The data to store. Each key of `data` must either be a valid
+        scalar column name (see `dclab.definitions`) or
+        one of ["contour", "image", "trace"]. The data type
+        must be given according to the column type:
+        
+        - scalar columns: 1d ndarray of size `N`, any dtype,
+          with the number of events `N`.
+        - contour: list of `N` 2d ndarrays of shape `(2,C)`, any dtype,
+          with each ndarray containing the x- and y- coordinates
+          of `C` contour points in pixels.
+        - image: 3d ndarray of shape `(N,A,B)`, uint8,
+          with the image dimensions `(x,y) = (A,B)`
+        - trace: 2d ndarray of shape `(N,T)`, any dtype
+          with a globally constant trace length `T`.
+    meta: dict of dicts
+        The meta data to store (see `dclab.definitions`).
+        Each key depicts a meta data section name whose data is given
+        as a dictionary, e.g.
+        
+            meta = {"imaging": {"exposure time": 20,
+                                "flash duration": 2,
+                                ...
+                                },
+                    "setup": {"channel width": 20,
+                              "chip region": "channel",
+                              ...
+                              },
+                    ...
+                    }
+        
+        Only section key names and key values therein registered
+        in dclab are allowed and are converted to the pre-defined
+        dtype.
+    close: bool
+        When set to `True` (default), the `h5py.File` object will
+        be closed and `None` is returned. When set to `False`,
+        the `h5py.File` object will be returned (useful for
+        real-time data acquisition).
     """
-    if not isinstance(name, (list,tuple)):
-        name = [name]
-        data = [data]
+    if not isinstance(rtdc_file, h5py.File):
+        rtdc_file = h5py.File(rtdc_file, "w")
     
-
-    if isinstance(rtdc_file, h5py.File):
-        f = rtdc_file
-        close = False
-    else:
-        f = h5py.File(rtdc_file, "a")
-        close = True
-    
-    if "events" not in f:
-        f.create_group("events")
-    
-    events = f["events"]
-    
-    for nam, dat in zip (name, data):
-        events.create_dataset(nam, data=dat)
-
-    if close:
-        f.close()
-
-
-def write_realtime(rtdc_file, name, data):
-    """Write data to RT-DC file
-    
-    Parameters
-    ----------
-    rtdc_file: instance of `h5py.File` in write mode
-        The file object to write to.
-    name: str or list of str
-        Name of the column to save
-    data: ndarray or list of ndarray
-        The data to store
-    """
     if not isinstance(name, (list,tuple)):
         name = [name]
         data = [data]
@@ -93,9 +100,9 @@ def write_realtime(rtdc_file, name, data):
                 # from https://github.com/h5py/h5py/issues/771
                 # Create and Set image attributes
                 # hdfView recognizes this a series of images
-                dset.attrs.create('CLASS', 'IMAGE')
-                dset.attrs.create('IMAGE_VERSION', '1.2')
-                dset.attrs.create('IMAGE_SUBCLASS', 'IMAGE_GRAYSCALE')
+                dset.attrs.create(b'CLASS', b'IMAGE')
+                dset.attrs.create(b'IMAGE_VERSION', b'1.2')
+                dset.attrs.create(b'IMAGE_SUBCLASS', b'IMAGE_GRAYSCALE')
                 #dset.attrs.create('IMAGE_MINMAXRANGE', np.array([0,255], dtype=np.uint8))
         else:
             # Add new data
@@ -111,7 +118,7 @@ def test_bulk_write():
     rtdc_file = "test_bulk.rtdc"
     if os.path.exists(rtdc_file):
         os.remove(rtdc_file)
-    write_bulk(rtdc_file, name, data)
+    write(rtdc_file, name, data)
     
     # Read the file:
     rtdc_data = h5py.File(rtdc_file)
@@ -121,6 +128,8 @@ def test_bulk_write():
 
 
 def test_real_time_write():
+    import cv2
+
     # Create huge array
     N = 11440
     # Writing 10 images at a time is faster than writing one image at a time
@@ -150,10 +159,11 @@ def test_real_time_write():
                             ,(20,70), cv2.FONT_HERSHEY_PLAIN, 1.0, 50)
             
 
-            write_realtime(fobj,
-                           name=["image", "axis1", "axis2"],
-                           data=[num_img[:], axis1[:], axis2[:]]
-                           )
+            write(fobj,
+                  name=["image", "axis1", "axis2"],
+                  data=[num_img[:], axis1[:], axis2[:]],
+                  close=False
+                  )
 
     print("Time to write {} events: {:.2f}s".format(N*M, time.time()-a))
     

@@ -1,3 +1,7 @@
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
+from __future__ import unicode_literals
+
 # These are columns that contain a scalar value for each event.
 # Other valid columns are "image", "contour", and "trace".
 _columns = [
