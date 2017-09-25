@@ -47,6 +47,10 @@ meta = {
         ["laser 3 lambda", float, "Laser 3 wavelength [nm]"],
         # FLUOR - Samplerate = 1000000
         ["sample rate", float, "Trace sample rate [Hz]"],
+        # FLUOR - ADCmax = 1
+        ["signal max", float, "Upper voltage detection limit [V]"],
+        # FLUOR - ADCmin = -1
+        ["signal min", float, "Lower voltage detection limit [V]"],
         ],
     # All imaging-related keywords
     "imaging": [
@@ -68,10 +72,6 @@ meta = {
         ["roi size x", int, "Image width [px]"],
         # ROI - height
         ["roi size y", int, "Image height [px]"],
-        # Framerate - Tap Code
-        ["tap code", str, "Camera data transfer tap code"], # What is this?
-        # Framerate - Tap Mode
-        ["tap mode", str, "Camera data transfer tap mode"], # What is this?
         ],
     # All parameters for online contour extraction from the event images
     "online_contour": [
@@ -95,13 +95,13 @@ meta = {
         # Image - Cell Aspect Max
         ["aspect max", float, "Maximum aspect ratio of bounding box"],
         # Image - Cell Max Length = 80.000000
-        ["size_px_x max", int, "Maximum bounding box size x [px]"],
+        ["size_x max", int, "Maximum bounding box size x [µm]"],
         # Image - Cell Max Height = 20.000000
-        ["size_py_y max", int, "Maximum bounding box size y [px]"],
+        ["size_y max", int, "Maximum bounding box size y [µm]"],
         # no correspondence
-        ["size_px_x min", int, "Minimum bounding box size x [px]"],
+        ["size_x min", int, "Minimum bounding box size x [µm]"],
         # no correspondence
-        ["size_py_y min", int, "Minimum bounding box size y [px]"],
+        ["size_y min", int, "Minimum bounding box size y [µm]"],
         ],
     # All setup-related keywords, except imaging
     "setup": [
@@ -127,18 +127,3 @@ meta = {
         ["viscosity", float, "Medium viscosity [Pa*s], if 'medium' not given"]
         ],
     }
-
-
-# These are configuration keywords that are deprecated,
-# redundant, or do not contain any important information:
-# FLUOR - Format = int16
-# Image - Cell Min = 10.000000
-# Image - Cell Max = 50
-
-# These are configuration keywords that need an explanation: 
-# Image - t1 = -256
-# Image - t2 = -6
-# FLUOR - ADCmin = -1
-# FLUOR - ADCmax = 1
-# Framerate - Tap Code
-# Framerate - Tap Mode
