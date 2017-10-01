@@ -20,6 +20,8 @@ meta = {
     "experiment": [
         # no correspondence
         ["date", str, "Date of measurement ('YYYY-MM-DD')"],
+        # no correspondence
+        ["event count", int, "Number of recorded events"],
         # General - Measurement Number
         ["run count", int, "Index of measurement run"],
         # no correspondence
