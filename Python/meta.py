@@ -23,7 +23,7 @@ meta = {
         # no correspondence
         ["event count", int, "Number of recorded events"],
         # General - Measurement Number
-        ["run count", int, "Index of measurement run"],
+        ["run index", int, "Index of measurement run"],
         # no correspondence
         ["sample", str, "Measured sample or user-defined reference"],
         # no correspondence
