@@ -54,10 +54,16 @@ meta = {
         # FLUOR - ADCmin = -1
         ["signal min", float, "Lower voltage detection limit [V]"],
         ],
+    # All tdms-related parameters
+    "fmt_tdms": [
+        ["video frame offset", int, "Missing events at beginning of video"],
+        ],
     # All imaging-related keywords
     "imaging": [
         # Framerate - Shutter Time
         ["exposure time", float, "Sensor exposure time [µs]"],
+        # General - Current LED [A]
+        ["flash current", float, "Light source current [A]"],
         # no correspondence
         ["flash device", str, "Light source device type (e.g. green LED)"],
         # General -  Shutter Time LED [us]
@@ -112,11 +118,11 @@ meta = {
         # General - Region
         ["chip region", str, "Imaged chip region (channel or reservoir)"],
         # General - Flow Rate [ul/s]
-        ["flow rate", float, "Flow rate in channel [µl/s]"],
+        ["flow rate", float, "Flow rate in channel [µL/s]"],
         # General - Sample Flow Rate [ul/s]
-        ["flow rate sample", float, "Sample flow rate [µl/s]"],
+        ["flow rate sample", float, "Sample flow rate [µL/s]"],
         # General - Sheath Flow Rate [ul/s]
-        ["flow rate sheath", float, "Sheath flow rate [µl/s]"],
+        ["flow rate sheath", float, "Sheath flow rate [µL/s]"],
         # no correspondence
         ["medium", str, "The medium used (e.g. CellCarrierB, water)"],
         # Image - Setup
