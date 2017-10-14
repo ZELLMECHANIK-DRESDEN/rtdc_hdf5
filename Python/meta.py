@@ -53,6 +53,8 @@ meta = {
         ["signal max", float, "Upper voltage detection limit [V]"],
         # FLUOR - ADCmin = -1
         ["signal min", float, "Lower voltage detection limit [V]"],
+        # no correspondence
+        ["trace median", int, "Rolling median filter size for traces"],
         ],
     # All tdms-related parameters
     "fmt_tdms": [
