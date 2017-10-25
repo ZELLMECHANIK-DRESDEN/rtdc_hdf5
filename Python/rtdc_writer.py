@@ -10,9 +10,6 @@ import dclab
 import h5py
 import numpy as np
 
-import columns
-import meta
-
 
 def write(rtdc_file, data, meta={}, close=True):
     """Write data to an RT-DC file
@@ -27,7 +24,7 @@ def write(rtdc_file, data, meta={}, close=True):
         The data to store. Each key of `data` must either be a valid
         scalar feature name (see `dclab.dfn.FEATURES`) or
         one of ["contour", "image", "trace"]. The data type
-        must be given according to the column type:
+        must be given according to the feature type:
         
         - scalar feature: 1d ndarray of size `N`, any dtype,
           with the number of events `N`.
