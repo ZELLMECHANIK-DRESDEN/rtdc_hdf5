@@ -141,16 +141,38 @@ def write(rtdc_file, data, meta={}, close=True):
     
     if isinstance(data, dclab.rtdc_dataset.RTDCBase):
         # RT-DC data set
-        keys = data.features()
+        feat_keys = data.features()
+        newmeta = {}
+        for mk in dclab.dfn.CFG_METADATA:
+            newmeta[mk] = dict(data.config[mk])
+        newmeta.update(meta)
+        meta = newmeta
     elif isinstance(data, dict):
         # dictionary
-        keys = list(data.keys())
-        keys.sort()
+        feat_keys = list(data.keys())
+        feat_keys.sort()
     else:
         msg = "`data` must be dict or RTDCBase"
         raise ValueError(msg)
-    # sanity checks
-    for kk in keys:
+
+    ## Write meta data
+    for sec in meta:
+        if sec not in dclab.dfn.CFG_METADATA:
+            # only allow writing of meta data that are not editable
+            # by the user (not dclab.dfn.CFG_ANALYSIS)
+            msg = "Meta data section not defined in dclab: {}".format(sec)
+            raise ValueError(msg)
+        for ck in meta[sec]:
+            idk = "{}|{}".format(sec, ck)
+            if ck not in dclab.dfn.config_keys[sec]:
+                msg = "Meta data key not defined in dclab: {}".format(idk)
+                raise ValueError(msg)
+            conftype = dclab.dfn.config_types[sec][ck]
+            rtdc_file.attrs[idk] = conftype(meta[sec][ck])
+
+    ## Write data
+    # data sanity checks
+    for kk in feat_keys:
         if not (kk in dclab.dfn.feature_names or
                 kk in ["contour", "image", "trace"]):
             msg = "Unknown data key: {}".format(kk)
@@ -165,18 +187,18 @@ def write(rtdc_file, data, meta={}, close=True):
         rtdc_file.create_group("events")
     events = rtdc_file["events"]
     # determine if we have a single event
-    for key in keys:
-        if key in dclab.dfn.feature_names:
+    for fk in feat_keys:
+        if fk in dclab.dfn.feature_names:
             store_scalar(h5group=events,
-                         name=key,
-                         data=data[key])
-        elif key == "contour":
+                         name=fk,
+                         data=data[fk])
+        elif fk == "contour":
             store_contour(h5group=events,
                           data=data["contour"])
-        elif key == "image":
+        elif fk == "image":
             store_image(h5group=events,
                         data=data["image"])
-        elif key == "trace":
+        elif fk == "trace":
             store_trace(h5group=events,
                         data=data["trace"])
 
@@ -246,6 +268,29 @@ def test_bulk_trace():
     assert "trace" in events.keys()
     assert np.allclose(events["trace"]["fl1_raw"], trace["fl1_raw"])
 
+
+def test_meta():
+    data = {"area_um": np.linspace(100.7, 110.9, 1000)}
+    rtdc_file = "test_meta.rtdc"
+    if os.path.exists(rtdc_file):
+        os.remove(rtdc_file)
+    meta = {"setup": {
+                "channel width": 20,
+                "chip region": "Channel",
+                },
+            "online_contour": {
+                "no absdiff": "True",
+                "image blur": 3.0,
+                },
+            }
+    write(rtdc_file, data, meta=meta)
+    # Read the file:
+    rtdc_data = h5py.File(rtdc_file)
+    assert rtdc_data.attrs["online_contour|no absdiff"] == True
+    assert isinstance(rtdc_data.attrs["online_contour|image blur"], int)
+    assert rtdc_data.attrs["setup|channel width"] == 20
+    assert rtdc_data.attrs["setup|chip region"] == "channel"
+    
 
 def test_real_time():
     import cv2
