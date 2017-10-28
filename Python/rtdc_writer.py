@@ -11,6 +11,82 @@ import h5py
 import numpy as np
 
 
+def store_contour(h5group, data):
+    if not isinstance(data, (list, tuple)):
+        # single event
+        data = [data]
+    if "contour" not in h5group:
+        dset = h5group.create_group("contour")
+        for ii, cc in enumerate(data):
+            dset.create_dataset("{}".format(ii), data=cc)    
+    else:
+        grp = h5group["contour"]
+        curid = len(grp["contour"].keys())
+        for ii, cc in enumerate(data):
+            grp.create_dataset("{}".format(curid + ii), data=cc)        
+
+
+def store_image(h5group, data):
+    if len(data.shape) == 2:
+        # single event
+        data = data.reshape(1, data.shape[0], data.shape[1])
+    if "image" not in h5group:
+        maxshape = (None, data.shape[1], data.shape[2])
+        chunks = (1, data.shape[1], data.shape[2])
+        dset = h5group.create_dataset("image",
+                                      data=data,
+                                      maxshape=maxshape,
+                                      chunks=chunks)
+        # Create and Set image attributes
+        # HDFView recognizes this as a series of images
+        dset.attrs["CLASS"] = "IMAGE"
+        dset.attrs["IMAGE_VERSION"] = "1.2"
+        dset.attrs["IMAGE_SUBCLASS"] = "IMAGE_GRAYSCALE"
+    else:
+        dset = h5group["image"]
+        oldsize = dset.shape[0]
+        dset.resize(oldsize + data.shape[0], axis=0)
+        dset[oldsize:] = data
+
+
+def store_scalar(h5group, name, data):
+    if np.isscalar(data):
+        # single event
+        data = np.atleast_1d(data)
+    if name not in h5group:
+        h5group.create_dataset(name,
+                               data=data,
+                               maxshape=(None,),
+                               chunks=True)        
+    else:
+        dset = h5group[name]
+        oldsize = dset.shape[0]
+        dset.resize(oldsize + data.shape[0], axis=0)
+        dset[oldsize:] = data
+
+
+def store_trace(h5group, data):
+    if len(data.values()[0].shape) == 1:
+        # single event
+        for dd in data:
+            data[dd] = data[dd].reshape(1, -1)    
+    if "trace" not in h5group:
+        grp = h5group.create_group("trace")
+        for flt in data:
+            maxshape = (None, data[flt].shape[-1])
+            grp.create_dataset(flt,
+                               data=data[flt],
+                               maxshape=maxshape,
+                               chunks=True)
+    else:
+        grp = h5group["trace"]
+        for flt in data:
+            dset = grp[flt]
+            oldsize = dset.shape[0]
+            dset.resize(oldsize + data[flt].shape[0], axis=0)
+            dset[oldsize:] = data[flt]        
+    
+
 def write(rtdc_file, data, meta={}, close=True):
     """Write data to an RT-DC file
     
@@ -89,88 +165,20 @@ def write(rtdc_file, data, meta={}, close=True):
         rtdc_file.create_group("events")
     events = rtdc_file["events"]
     # determine if we have a single event
-    for kk in keys:
-        if kk in dclab.dfn.feature_names:
-            if np.isscalar(data[kk]):
-                single = True
-            else:
-                single = False
-            break
-    else:
-        msg = "`data` must contain scalar feature data"
-        raise NotImplementedError(msg)
-    
     for key in keys:
-        dat = data[key]
-        # convert single events
-        if single:
-            if key in dclab.dfn.feature_names:
-                # scalar to array
-                dat = np.atleast_1d(dat)
-            elif key == "contour":
-                # array must be in list
-                dat = [dat]
-            elif key == "image":
-                # image array has first axis as index of images
-                dat = dat.reshape(1, dat.shape[-2], dat.shape[-1])
-            elif key == "trace":
-                # each trace data array has first axis as index
-                for dd in dat:
-                    dat[dd] = dat[dd].reshape(1, -1)
-        # write data
-        if key not in events:
-            # initialize groups and datasets
-            if key in dclab.dfn.feature_names:
-                events.create_dataset(key,
-                                      data=dat,
-                                      maxshape=(None,),
-                                      chunks=True)
-            elif key == "contour":
-                events.create_group(key)
-                dset = events["contour"]
-                for ii, cc in enumerate(dat):
-                    dset.create_dataset("{}".format(ii), data=cc)
-            elif key == "image":
-                maxshape = (None, dat.shape[1], dat.shape[2])
-                chunks = (1, dat.shape[1], dat.shape[2])
-                events.create_dataset(key,
-                                      data=dat,
-                                      maxshape=maxshape,
-                                      chunks=chunks)
-                # Create and Set image attributes
-                # HDFView recognizes this as a series of images
-                dset = events["image"]
-                dset.attrs["CLASS"] = "IMAGE"
-                dset.attrs["IMAGE_VERSION"] = "1.2"
-                dset.attrs["IMAGE_SUBCLASS"] = "IMAGE_GRAYSCALE"
-            elif key == "trace":
-                events.create_group(key)
-                for flt in dat:
-                    maxshape = (None, dat[flt].shape[-1])
-                    grp = events["trace"]
-                    grp.create_dataset(flt,
-                                       data=dat[flt],
-                                       maxshape=maxshape,
-                                       chunks=True)
-        else:
-            # append data
-            if key in dclab.dfn.feature_names or key == "image":
-                dset = events[key]
-                oldsize = dset.shape[0]
-                dset.resize(oldsize + dat.shape[0], axis=0)
-                dset[oldsize:] = dat
-            elif key == "contour":
-                grp = events[key]
-                curid = len(grp["contour"].keys())
-                for ii, cc in enumerate(dat):
-                    grp.create_dataset("{}".format(curid + ii), data=cc)
-            elif key == "trace":
-                grp = events[key]
-                for flt in dat:
-                    dset = grp[flt]
-                    oldsize = dset.shape[0]
-                    dset.resize(oldsize + dat[flt].shape[0], axis=0)
-                    dset[oldsize:] = dat[flt]
+        if key in dclab.dfn.feature_names:
+            store_scalar(h5group=events,
+                         name=key,
+                         data=data[key])
+        elif key == "contour":
+            store_contour(h5group=events,
+                          data=data["contour"])
+        elif key == "image":
+            store_image(h5group=events,
+                        data=data["image"])
+        elif key == "trace":
+            store_trace(h5group=events,
+                        data=data["trace"])
 
 
 def test_bulk_scalar():
