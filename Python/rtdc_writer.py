@@ -163,7 +163,7 @@ def write(rtdc_file, data, meta={}, close=True):
             msg = "Meta data section not defined in dclab: {}".format(sec)
             raise ValueError(msg)
         for ck in meta[sec]:
-            idk = "{}|{}".format(sec, ck)
+            idk = "{}:{}".format(sec, ck)
             if ck not in dclab.dfn.config_keys[sec]:
                 msg = "Meta data key not defined in dclab: {}".format(idk)
                 raise ValueError(msg)
