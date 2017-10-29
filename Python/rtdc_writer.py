@@ -286,10 +286,10 @@ def test_meta():
     write(rtdc_file, data, meta=meta)
     # Read the file:
     rtdc_data = h5py.File(rtdc_file)
-    assert rtdc_data.attrs["online_contour|no absdiff"] == True
-    assert isinstance(rtdc_data.attrs["online_contour|image blur"], int)
-    assert rtdc_data.attrs["setup|channel width"] == 20
-    assert rtdc_data.attrs["setup|chip region"] == "channel"
+    assert rtdc_data.attrs["online_contour:no absdiff"] == True
+    assert isinstance(rtdc_data.attrs["online_contour:image blur"], int)
+    assert rtdc_data.attrs["setup:channel width"] == 20
+    assert rtdc_data.attrs["setup:chip region"] == "channel"
     
 
 def test_real_time():
