@@ -5,10 +5,16 @@ from __future__ import unicode_literals
 
 import os
 import time
+import sys
 
 import dclab
 import h5py
 import numpy as np
+
+if sys.version_info[0] == 2:
+    h5str = unicode
+else:
+    h5str = str
 
 
 def store_contour(h5group, data):
@@ -57,7 +63,7 @@ def store_scalar(h5group, name, data):
         h5group.create_dataset(name,
                                data=data,
                                maxshape=(None,),
-                               chunks=True)        
+                               chunks=True)
     else:
         dset = h5group[name]
         oldsize = dset.shape[0]
@@ -87,7 +93,7 @@ def store_trace(h5group, data):
             dset[oldsize:] = data[flt]        
     
 
-def write(rtdc_file, data, meta={}, close=True):
+def write(rtdc_file, data={}, meta={}, logs={}, mode="reset"):
     """Write data to an RT-DC file
     
     Parameters
@@ -130,14 +136,30 @@ def write(rtdc_file, data, meta={}, close=True):
         Only section key names and key values therein registered
         in dclab are allowed and are converted to the pre-defined
         dtype.
-    close: bool
-        When set to `True` (default), the `h5py.File` object will
-        be closed and `None` is returned. When set to `False`,
-        the `h5py.File` object will be returned (useful for
-        real-time data acquisition).
+    logs: dict of lists
+        Each key of `logs` refers to a list of strings that contains
+        logging information. Each item in the list can be considered to
+        be one line in the log file.
+    mode: str
+        Defines how the input `data` and `logs` are stored:
+        - "append": append new data to existing Datasets; the opened
+                    `h5py.File` object is returned (used in real-
+                    time data storage)
+        - "replace": replace keys given by `data` and `logs`; the
+                    opened `h5py.File` object is closed and `None`
+                    is returned (used for ancillary feature storage)
+        - "reset": do not keep any previous data; the opened
+                   `h5py.File` object is closed and `None` is returned
+                   (default)
     """
+    if mode not in ["append", "replace", "reset"]:
+        raise ValueError("`mode` must be one of [append, replace, reset]")
     if not isinstance(rtdc_file, h5py.File):
-        rtdc_file = h5py.File(rtdc_file, "w")
+        if mode == "reset":
+            h5mode = "w"
+        else:
+            h5mode = "a"
+        rtdc_file = h5py.File(rtdc_file, mode=h5mode)
     
     if isinstance(data, dclab.rtdc_dataset.RTDCBase):
         # RT-DC data set
@@ -186,7 +208,12 @@ def write(rtdc_file, data, meta={}, close=True):
     if "events" not in rtdc_file:
         rtdc_file.create_group("events")
     events = rtdc_file["events"]
-    # determine if we have a single event
+    # remove previous data
+    if mode == "replace":
+        for rk in feat_keys:
+            if rk in events:
+                del events[rk]
+    # store experimental data
     for fk in feat_keys:
         if fk in dclab.dfn.feature_names:
             store_scalar(h5group=events,
@@ -202,12 +229,63 @@ def write(rtdc_file, data, meta={}, close=True):
             store_trace(h5group=events,
                         data=data["trace"])
 
+    ## Write logs
+    if "logs" not in rtdc_file:
+        rtdc_file.create_group("logs")
+    log_group = rtdc_file["logs"]
+    # remove previous data
+    if mode == "replace":
+        for rl in logs:
+            if rl in log_group:
+                del log_group[rl]
+    # store logs
+    dt = h5py.special_dtype(vlen=h5str)
+    for lkey in logs:
+        ldata = logs[lkey]
+        if isinstance(ldata, (str, h5str)):
+            logs = [ldata]
+        lnum = len(ldata)
+        if lkey not in log_group:
+            log_dset = log_group.create_dataset(lkey,
+                                                (lnum,),
+                                                dtype=dt,
+                                                maxshape=(None,),
+                                                chunks=True)
+            for ii, line in enumerate(ldata):
+                log_dset[ii] = line
+        else:
+            log_dset = log_group[lkey]
+            oldsize = log_dset.shape[0]
+            log_dset.resize(oldsize + lnum, axis=0)
+            for ii, line in enumerate(ldata):
+                log_dset[oldsize + ii] = line
+
+
+def test_mode():
+    data = {"area_um": np.linspace(100.7, 110.9, 1000)}
+    data2 = {"deform": np.linspace(.7, .8, 1000)}
+    
+    rtdc_file = "test_replace.rtdc"
+    write(rtdc_file, data=data, mode="reset")
+    write(rtdc_file, data=data, mode="append")
+    # Read the file:
+    with h5py.File(rtdc_file) as rtdc_data1:
+        events1 = rtdc_data1["events"]
+        assert "area_um" in events1.keys()
+        assert len(events1["area_um"]) == 2*len(data["area_um"])
+
+    write(rtdc_file, data=data, mode="replace")
+    write(rtdc_file, data=data2, mode="replace")
+    with h5py.File(rtdc_file) as rtdc_data2:
+        events2 = rtdc_data2["events"]
+        assert "area_um" in events2.keys()
+        assert "deform" in events2.keys()
+        assert len(events2["area_um"]) == len(data["area_um"])
+
 
 def test_bulk_scalar():
     data = {"area_um": np.linspace(100.7, 110.9, 1000)}
     rtdc_file = "test_bulk_scalar.rtdc"
-    if os.path.exists(rtdc_file):
-        os.remove(rtdc_file)
     write(rtdc_file, data)
     # Read the file:
     rtdc_data = h5py.File(rtdc_file)
@@ -225,8 +303,6 @@ def test_bulk_contour():
     data = {"area_um": np.linspace(100.7, 110.9, num),
             "contour": contour}
     rtdc_file = "test_bulk_contour.rtdc"
-    if os.path.exists(rtdc_file):
-        os.remove(rtdc_file)
     write(rtdc_file, data)
     # Read the file:
     rtdc_data = h5py.File(rtdc_file)
@@ -241,14 +317,25 @@ def test_bulk_image():
     data = {"area_um": np.linspace(100.7, 110.9, num),
             "image": image}
     rtdc_file = "test_bulk_image.rtdc"
-    if os.path.exists(rtdc_file):
-        os.remove(rtdc_file)
     write(rtdc_file, data)
     # Read the file:
     rtdc_data = h5py.File(rtdc_file)
     events = rtdc_data["events"]
     assert "image" in events.keys()
     assert np.allclose(events["image"][10], image[10])
+
+
+def test_bulk_logs():
+    log = ["This is a test log that contains two lines.",
+           "This is the second line.",
+           ]
+    rtdc_file = "test_bulk_logs.rtdc"
+    write(rtdc_file, logs={"testlog": log})
+    # Read the file:
+    rtdc_data = h5py.File(rtdc_file)
+    outlog = rtdc_data["logs"]["testlog"]
+    for ii in range(len(outlog)):
+        assert outlog[ii] == log[ii]
 
 
 def test_bulk_trace():
@@ -259,8 +346,6 @@ def test_bulk_trace():
     data = {"area_um": np.linspace(100.7, 110.9, num),
             "trace": trace}
     rtdc_file = "test_bulk_trace.rtdc"
-    if os.path.exists(rtdc_file):
-        os.remove(rtdc_file)
     write(rtdc_file, data)
     # Read the file:
     rtdc_data = h5py.File(rtdc_file)
@@ -272,8 +357,6 @@ def test_bulk_trace():
 def test_meta():
     data = {"area_um": np.linspace(100.7, 110.9, 1000)}
     rtdc_file = "test_meta.rtdc"
-    if os.path.exists(rtdc_file):
-        os.remove(rtdc_file)
     meta = {"setup": {
                 "channel width": 20,
                 "chip region": "Channel",
@@ -292,6 +375,25 @@ def test_meta():
     assert rtdc_data.attrs["setup:chip region"] == "channel"
     
 
+def test_append_logs():
+    log1 = ["This is a test log that contains two lines.",
+            "This is the second line.",
+            ]
+    log2 = ["These are other logging events.",
+            "They are appended to the log.",
+            "And may have different lengths."
+            ]
+    rtdc_file = "test_append_logs.rtdc"
+    with h5py.File(rtdc_file, "w") as fobj:
+        write(fobj, logs={"testlog": log1}, mode="append")
+        write(fobj, logs={"testlog": log2}, mode="append")
+    # Read the file:
+    rtdc_data = h5py.File(rtdc_file)
+    outlog = rtdc_data["logs"]["testlog"]
+    for ii in range(len(outlog)):
+        assert outlog[ii] == (log1 + log2)[ii]
+
+
 def test_real_time():
     import cv2
 
@@ -306,12 +408,10 @@ def test_real_time():
     axis1 = np.linspace(0,1,M)
     axis2 = np.arange(M)
     rtdc_file = "test_rt.rtdc"
-    if os.path.exists(rtdc_file):
-        os.remove(rtdc_file)
     
     a = time.time()
     
-    with h5py.File(rtdc_file, "a") as fobj:
+    with h5py.File(rtdc_file, "w") as fobj:
         # simulate real time and write one image at a time
         for _ii in range(N//M):
             #print(ii)
@@ -329,7 +429,7 @@ def test_real_time():
             
             write(fobj,
                   data=data,
-                  close=False
+                  mode="append",
                   )
 
     print("Time to write {} events: {:.2f}s".format(N*M, time.time()-a))
