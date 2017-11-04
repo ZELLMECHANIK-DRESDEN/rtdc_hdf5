@@ -294,6 +294,29 @@ def test_bulk_scalar():
     assert np.all(events["area_um"][:] == data["area_um"])
 
 
+def replace_contour():
+    num = 20
+    contour = []
+    contour2 = []
+    for ii in range(5, num + 5):
+        cii = np.arange(2 * ii).reshape(2, ii)
+        contour.append(cii)
+        contour2.append(cii*2)
+    
+    data1 = {"area_um": np.linspace(100.7, 110.9, num),
+             "contour": contour}
+    data2 = {"contour": contour2}
+    rtdc_file = "test_replace_contour.rtdc"
+    write(rtdc_file, data1)
+    write(rtdc_file, data2, mode="replace")
+    # verify
+    rtdc_data = h5py.File(rtdc_file)
+    events = rtdc_data["events"]
+    assert "contour" in events.keys()
+    assert not np.allclose(events["contour"]["10"], contour[10])
+    assert np.allclose(events["contour"]["10"], contour2[10])
+
+
 def test_bulk_contour():
     num = 20
     contour = []
