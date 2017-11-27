@@ -17,19 +17,25 @@ else:
     h5str = str
 
 
-def store_contour(h5group, data):
+def store_contour(h5group, data, compression="lzf"):
     if not isinstance(data, (list, tuple)):
         # single event
         data = [data]
     if "contour" not in h5group:
         dset = h5group.create_group("contour")
         for ii, cc in enumerate(data):
-            dset.create_dataset("{}".format(ii), data=cc)    
+            dset.create_dataset("{}".format(ii),
+                                data=cc,
+                                fletcher32=True,
+                                compression=compression)
     else:
         grp = h5group["contour"]
         curid = len(grp["contour"].keys())
         for ii, cc in enumerate(data):
-            grp.create_dataset("{}".format(curid + ii), data=cc)        
+            grp.create_dataset("{}".format(curid + ii),
+                               data=cc,
+                               fletcher32=True,
+                               compression=compression)
 
 
 def store_image(h5group, data):
@@ -42,7 +48,9 @@ def store_image(h5group, data):
         dset = h5group.create_dataset("image",
                                       data=data,
                                       maxshape=maxshape,
-                                      chunks=chunks)
+                                      chunks=chunks,
+                                      fletcher32=True,
+                                      compression="szip")
         # Create and Set image attributes
         # HDFView recognizes this as a series of images
         dset.attrs["CLASS"] = "IMAGE"
@@ -63,7 +71,8 @@ def store_scalar(h5group, name, data):
         h5group.create_dataset(name,
                                data=data,
                                maxshape=(None,),
-                               chunks=True)
+                               chunks=True,
+                               fletcher32=True)
     else:
         dset = h5group[name]
         oldsize = dset.shape[0]
@@ -83,7 +92,8 @@ def store_trace(h5group, data):
             grp.create_dataset(flt,
                                data=data[flt],
                                maxshape=maxshape,
-                               chunks=True)
+                               chunks=True,
+                               fletcher32=True)
     else:
         grp = h5group["trace"]
         for flt in data:
@@ -93,7 +103,8 @@ def store_trace(h5group, data):
             dset[oldsize:] = data[flt]        
     
 
-def write(rtdc_file, data={}, meta={}, logs={}, mode="reset"):
+def write(rtdc_file, data={}, meta={}, logs={}, mode="reset",
+          compression=None):
     """Write data to an RT-DC file
     
     Parameters
@@ -151,6 +162,9 @@ def write(rtdc_file, data={}, meta={}, logs={}, mode="reset"):
         - "reset": do not keep any previous data; the opened
                    `h5py.File` object is closed and `None` is returned
                    (default)
+    compression: str
+        Compression method for contour data and logs,
+        one of ["lzf", "szip", "gzip"].
     """
     if mode not in ["append", "replace", "reset"]:
         raise ValueError("`mode` must be one of [append, replace, reset]")
@@ -221,7 +235,8 @@ def write(rtdc_file, data={}, meta={}, logs={}, mode="reset"):
                          data=data[fk])
         elif fk == "contour":
             store_contour(h5group=events,
-                          data=data["contour"])
+                          data=data["contour"],
+                          compression=compression)
         elif fk == "image":
             store_image(h5group=events,
                         data=data["image"])
@@ -250,7 +265,9 @@ def write(rtdc_file, data={}, meta={}, logs={}, mode="reset"):
                                                 (lnum,),
                                                 dtype=dt,
                                                 maxshape=(None,),
-                                                chunks=True)
+                                                chunks=True,
+                                                fletcher32=True,
+                                                compression=compression)
             for ii, line in enumerate(ldata):
                 log_dset[ii] = line
         else:
