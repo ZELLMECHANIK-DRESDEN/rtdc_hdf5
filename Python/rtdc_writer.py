@@ -53,9 +53,10 @@ def store_image(h5group, data):
                                       compression="szip")
         # Create and Set image attributes
         # HDFView recognizes this as a series of images
-        dset.attrs["CLASS"] = "IMAGE"
-        dset.attrs["IMAGE_VERSION"] = "1.2"
-        dset.attrs["IMAGE_SUBCLASS"] = "IMAGE_GRAYSCALE"
+        dset.attrs.create('CLASS', b'IMAGE')
+        dset.attrs.create('IMAGE_VERSION', b'1.2')
+        dset.attrs.create('IMAGE_SUBCLASS', b'IMAGE_TRUECOLOR')
+        dset.attrs.create('INTERLACE_MODE', b'INTERLACE_PIXEL')
     else:
         dset = h5group["image"]
         oldsize = dset.shape[0]
@@ -166,6 +167,7 @@ def write(rtdc_file, data={}, meta={}, logs={}, mode="reset",
         Compression method for contour data and logs,
         one of ["lzf", "szip", "gzip"].
     """
+    raise ValueError("Please use dclab.rtdc_dataset.write_hdf5.write!")
     if mode not in ["append", "replace", "reset"]:
         raise ValueError("`mode` must be one of [append, replace, reset]")
     if not isinstance(rtdc_file, h5py.File):
